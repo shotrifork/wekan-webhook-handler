@@ -132,12 +132,16 @@ async function handleWebhook(request: Request): Promise<Response> {
           const response = await fetch(window.location.href, requestConfig);
           const jsonResponse = await response.json();
           
-          // Find or create response section in current div
-          let responseSection = targetDiv.querySelector('.response-section');
+          // Find the example container
+          const container = targetDiv.closest('.example-container');
+          if (!container) return;
+          
+          // Find or create response section
+          let responseSection = container.querySelector('.response-section');
           if (!responseSection) {
             responseSection = document.createElement('div');
             responseSection.className = 'mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section';
-            targetDiv.appendChild(responseSection);
+            container.appendChild(responseSection);
           }
           
           // Update content with the actual response
@@ -148,7 +152,7 @@ async function handleWebhook(request: Request): Promise<Response> {
           responseSection.innerHTML = '<pre class="text-sm text-gray-700"><code>' + escapedJson + '</code></pre>';
           
           // Add status indicator
-          const statusDiv = targetDiv.querySelector('.status-indicator');
+          const statusDiv = container.querySelector('.status-indicator');
           if (statusDiv) {
             statusDiv.textContent = response.ok ? '✓ Response:' : '✗ Response:';
             statusDiv.className = response.ok ? 'text-sm text-green-600' : 'text-sm text-red-600';
@@ -169,12 +173,16 @@ async function handleWebhook(request: Request): Promise<Response> {
           }
           
           console.error('Error making request:', error);
-          // Show error in response section
-          let responseSection = targetDiv.querySelector('.response-section');
+          // Find the example container
+          const container = targetDiv.closest('.example-container');
+          if (!container) return;
+          
+          // Find or create response section
+          let responseSection = container.querySelector('.response-section');
           if (!responseSection) {
             responseSection = document.createElement('div');
             responseSection.className = 'mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section';
-            targetDiv.appendChild(responseSection);
+            container.appendChild(responseSection);
           }
           const errorMessage = error.message || 'Unknown error occurred';
           responseSection.innerHTML = '<pre class="text-sm text-red-600"><code>Error: ' + errorMessage + '</code></pre>';
@@ -210,7 +218,8 @@ async function handleWebhook(request: Request): Promise<Response> {
       const example = urlParams.get('example');
       if (example) {
         const button = document.querySelector('button[data-example="' + example + '"]');
-        const responseElement = button?.closest('div')?.querySelector('.response-section');
+        const container = button?.closest('.example-container');
+        const responseElement = container?.querySelector('.response-section');
         if (responseElement) {
           responseElement.classList.add('blink-animation');
         }
@@ -274,13 +283,15 @@ async function handleWebhook(request: Request): Promise<Response> {
   -H "X-Wekan-Token: test1234" \\
   -d '{"event":"test","data":{"message":"This is a test webhook"}}'</code></pre>
             </div>
-            <div class="mt-2 flex items-center gap-2">
-              <button data-example="success" class="inline-flex items-center px-3 py-1 rounded-md bg-green-100 text-green-700 text-sm hover:bg-green-200 transition-colors">
-                ▶ Try this example
-              </button>
-              <div class="text-sm text-green-600 status-indicator"></div>
+            <div class="example-container">
+              <div class="mt-2 flex items-center gap-2">
+                <button data-example="success" class="inline-flex items-center px-3 py-1 rounded-md bg-green-100 text-green-700 text-sm hover:bg-green-200 transition-colors">
+                  ▶ Try this example
+                </button>
+                <div class="text-sm text-green-600 status-indicator"></div>
+              </div>
+              <div class="mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section"></div>
             </div>
-            <div class="response-section"></div>
           </div>
 
           <!-- Failure Example (wrong token) -->
@@ -292,13 +303,15 @@ async function handleWebhook(request: Request): Promise<Response> {
   -H "X-Wekan-Token: wrong-token" \\
   -d '{"event":"test","data":{"message":"This should fail"}}'</code></pre>
             </div>
-            <div class="mt-2 flex items-center gap-2">
-              <button data-example="fail-token" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
-                ▶ Try this example
-              </button>
-              <div class="text-sm text-red-600 status-indicator"></div>
+            <div class="example-container">
+              <div class="mt-2 flex items-center gap-2">
+                <button data-example="fail-token" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
+                  ▶ Try this example
+                </button>
+                <div class="text-sm text-red-600 status-indicator"></div>
+              </div>
+              <div class="mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section"></div>
             </div>
-            <div class="response-section"></div>
           </div>
 
           <!-- Failure Example (missing token) -->
@@ -309,13 +322,15 @@ async function handleWebhook(request: Request): Promise<Response> {
   -H "Content-Type: application/json" \\
   -d '{"event":"test","data":{"message":"This should fail"}}'</code></pre>
             </div>
-            <div class="mt-2 flex items-center gap-2">
-              <button data-example="fail-missing" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
-                ▶ Try this example
-              </button>
-              <div class="text-sm text-red-600 status-indicator"></div>
+            <div class="example-container">
+              <div class="mt-2 flex items-center gap-2">
+                <button data-example="fail-missing" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
+                  ▶ Try this example
+                </button>
+                <div class="text-sm text-red-600 status-indicator"></div>
+              </div>
+              <div class="mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section"></div>
             </div>
-            <div class="response-section"></div>
           </div>
         </div>
 

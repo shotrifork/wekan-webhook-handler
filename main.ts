@@ -80,32 +80,141 @@ async function handleWebhook(request: Request): Promise<Response> {
   <title>Wekan Webhook Documentation</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/@tailwindcss/ui@latest/dist/tailwind-ui.min.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html {
       scroll-behavior: smooth;
     }
+    @keyframes blink-orange {
+      0% { background-color: rgb(249 115 22 / 0.2); }
+      50% { background-color: rgb(249 115 22 / 0.4); }
+      100% { background-color: rgb(243 244 246); }
+    }
+    .blink-animation {
+      animation: blink-orange 1s ease-in-out;
+    }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Prevent default link behavior and handle example links
-      document.querySelectorAll('a[href^="?example="]').forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const url = new URL(window.location);
-          url.searchParams.set('example', link.href.split('=')[1]);
-          window.history.pushState({}, '', url);
-          
-          // Smoothly scroll to the response if it exists
-          const responseElement = link.closest('div').querySelector('.response-section');
-          if (responseElement) {
-            responseElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      // Function to update response section
+      async function updateResponseSection(example, targetDiv) {
+        let controller;
+        try {
+          // Cleanup any existing controller
+          if (controller) {
+            controller.abort();
           }
           
-          // Reload the page to show the response
-          window.location.reload();
+          // Create new controller for this request
+          controller = new AbortController();
+          
+          // Make the actual HTTP request based on the example type
+          const requestConfig = {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              event: "test",
+              data: { message: example === 'success' ? "This is a test webhook" : "This should fail" }
+            }),
+            signal: controller.signal
+          };
+
+          // Add token based on example type
+          if (example === 'success') {
+            requestConfig.headers['X-Wekan-Token'] = 'test1234';
+          } else if (example === 'fail-token') {
+            requestConfig.headers['X-Wekan-Token'] = 'wrong-token';
+          }
+          
+          const response = await fetch(window.location.href, requestConfig);
+          const jsonResponse = await response.json();
+          
+          // Find or create response section in current div
+          let responseSection = targetDiv.querySelector('.response-section');
+          if (!responseSection) {
+            responseSection = document.createElement('div');
+            responseSection.className = 'mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section';
+            targetDiv.appendChild(responseSection);
+          }
+          
+          // Update content with the actual response
+          const escapedJson = JSON.stringify(jsonResponse, null, 2)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          responseSection.innerHTML = '<pre class="text-sm text-gray-700"><code>' + escapedJson + '</code></pre>';
+          
+          // Add status indicator
+          const statusDiv = targetDiv.querySelector('.status-indicator');
+          if (statusDiv) {
+            statusDiv.textContent = response.ok ? '✓ Response:' : '✗ Response:';
+            statusDiv.className = response.ok ? 'text-sm text-green-600' : 'text-sm text-red-600';
+          }
+          
+          // Trigger animation
+          responseSection.classList.remove('blink-animation');
+          void responseSection.offsetWidth;
+          responseSection.classList.add('blink-animation');
+          
+          // Scroll to the response
+          responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            console.log('Request was aborted');
+            return;
+          }
+          
+          console.error('Error making request:', error);
+          // Show error in response section
+          let responseSection = targetDiv.querySelector('.response-section');
+          if (!responseSection) {
+            responseSection = document.createElement('div');
+            responseSection.className = 'mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section';
+            targetDiv.appendChild(responseSection);
+          }
+          const errorMessage = error.message || 'Unknown error occurred';
+          responseSection.innerHTML = '<pre class="text-sm text-red-600"><code>Error: ' + errorMessage + '</code></pre>';
+        } finally {
+          // Cleanup controller
+          if (controller) {
+            controller.abort();
+            controller = null;
+          }
+        }
+      }
+
+      // Handle example buttons
+      document.querySelectorAll('button[data-example]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const example = button.getAttribute('data-example');
+          if (!example) return;
+
+          const url = new URL(window.location.href);
+          url.searchParams.set('example', example);
+          window.history.pushState({}, '', url);
+          
+          // Update the response section
+          const targetDiv = button.closest('div');
+          if (targetDiv) {
+            await updateResponseSection(example, targetDiv);
+          }
         });
       });
+
+      // Add animation to response sections if they exist on page load
+      const urlParams = new URLSearchParams(window.location.search);
+      const example = urlParams.get('example');
+      if (example) {
+        const button = document.querySelector('button[data-example="' + example + '"]');
+        const responseElement = button?.closest('div')?.querySelector('.response-section');
+        if (responseElement) {
+          responseElement.classList.add('blink-animation');
+        }
+      }
     });
   </script>
 </head>
@@ -166,18 +275,12 @@ async function handleWebhook(request: Request): Promise<Response> {
   -d '{"event":"test","data":{"message":"This is a test webhook"}}'</code></pre>
             </div>
             <div class="mt-2 flex items-center gap-2">
-              <a href="?example=success" class="inline-flex items-center px-3 py-1 rounded-md bg-green-100 text-green-700 text-sm hover:bg-green-200 transition-colors">
+              <button data-example="success" class="inline-flex items-center px-3 py-1 rounded-md bg-green-100 text-green-700 text-sm hover:bg-green-200 transition-colors">
                 ▶ Try this example
-              </a>
-              ${example === 'success' ? `
-                <div class="text-sm text-green-600">✓ Response:</div>
-              ` : ''}
+              </button>
+              <div class="text-sm text-green-600 status-indicator"></div>
             </div>
-            ${example === 'success' ? `
-              <div class="mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section">
-                <pre class="text-sm text-gray-700"><code>${exampleResponse}</code></pre>
-              </div>
-            ` : ''}
+            <div class="response-section"></div>
           </div>
 
           <!-- Failure Example (wrong token) -->
@@ -190,18 +293,12 @@ async function handleWebhook(request: Request): Promise<Response> {
   -d '{"event":"test","data":{"message":"This should fail"}}'</code></pre>
             </div>
             <div class="mt-2 flex items-center gap-2">
-              <a href="?example=fail-token" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
+              <button data-example="fail-token" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
                 ▶ Try this example
-              </a>
-              ${example === 'fail-token' ? `
-                <div class="text-sm text-red-600">✗ Response:</div>
-              ` : ''}
+              </button>
+              <div class="text-sm text-red-600 status-indicator"></div>
             </div>
-            ${example === 'fail-token' ? `
-              <div class="mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section">
-                <pre class="text-sm text-gray-700"><code>${exampleResponse}</code></pre>
-              </div>
-            ` : ''}
+            <div class="response-section"></div>
           </div>
 
           <!-- Failure Example (missing token) -->
@@ -213,18 +310,12 @@ async function handleWebhook(request: Request): Promise<Response> {
   -d '{"event":"test","data":{"message":"This should fail"}}'</code></pre>
             </div>
             <div class="mt-2 flex items-center gap-2">
-              <a href="?example=fail-missing" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
+              <button data-example="fail-missing" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-700 text-sm hover:bg-red-200 transition-colors">
                 ▶ Try this example
-              </a>
-              ${example === 'fail-missing' ? `
-                <div class="text-sm text-red-600">✗ Response:</div>
-              ` : ''}
+              </button>
+              <div class="text-sm text-red-600 status-indicator"></div>
             </div>
-            ${example === 'fail-missing' ? `
-              <div class="mt-2 bg-gray-50 rounded-lg p-4 overflow-x-auto response-section">
-                <pre class="text-sm text-gray-700"><code>${exampleResponse}</code></pre>
-              </div>
-            ` : ''}
+            <div class="response-section"></div>
           </div>
         </div>
 

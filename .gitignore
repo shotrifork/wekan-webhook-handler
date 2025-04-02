@@ -1,0 +1,19 @@
+# Environment variables
+.env
+
+# Editor directories and files
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Deno
+.cursor/
+
+.env.local
+.env.*.local
+deno.lock 

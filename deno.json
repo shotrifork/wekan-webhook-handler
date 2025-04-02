@@ -1,0 +1,26 @@
+{
+  "tasks": {
+    "start": "deno run --allow-net --allow-read --allow-env main.ts",
+    "dev": "deno run --watch --allow-net --allow-read --allow-env main.ts",
+    "test-webhook": "echo 'Testing webhook with valid token...' && curl -X POST https://wekan-webhook.deno.dev/ -H 'Content-Type: application/json' -H 'X-Webhook-Token: test1234' -d '{\"event\":\"test\",\"data\":{\"message\":\"Test from deno task\"}}' && echo '\n\nTesting webhook with invalid token...' && curl -X POST https://wekan-webhook.deno.dev/ -H 'Content-Type: application/json' -H 'X-Webhook-Token: wrong-token' -d '{\"event\":\"test\",\"data\":{\"message\":\"This should fail\"}}'"
+  },
+  "imports": {
+    "std/": "https://deno.land/std@0.208.0/"
+  },
+  "fmt": {
+    "include": ["*.ts", "*.mdc"],
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "singleQuote": false
+  },
+  "lint": {
+    "include": ["*.ts"],
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "strict": true
+  }
+} 

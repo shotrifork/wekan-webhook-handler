@@ -1,5 +1,7 @@
 import { load } from "https://deno.land/std@0.220.1/dotenv/mod.ts";
 
+const EXTENDED_LOGGING = false;
+
 // Load environment variables - try both Deno.env and .env file
 let WEBHOOK_TOKEN: string;
 try {
@@ -395,7 +397,10 @@ async function handleWebhook(request: Request): Promise<Response> {
 
   // Log basic request info
   console.log(`\nReceived ${request.method} request from ${request.headers.get("user-agent") || "unknown client"}`);
-  console.log("Headers:", Object.fromEntries(request.headers.entries()));
+  
+  if (EXTENDED_LOGGING) {
+    console.log("Headers:", Object.fromEntries(request.headers.entries()));
+  }
 
   // Validate token if configured
   const tokenValidation = validateToken(request);
@@ -403,19 +408,26 @@ async function handleWebhook(request: Request): Promise<Response> {
     console.log("🚫 Webhook authentication failed:");
     console.log(`  Reason: ${tokenValidation.reason}`);
     console.log(`  Received token: "${request.headers.get("X-Webhook-Token")}"`);
-    console.log(`  Expected token: "${WEBHOOK_TOKEN}"`);
-    console.log("  Request details:");
-    console.log(`    URL: ${request.url}`);
-    console.log(`    Method: ${request.method}`);
-    console.log("    Headers:", JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
+
+    if (EXTENDED_LOGGING) {
+      console.log(`  Expected token: "${WEBHOOK_TOKEN}"`);
+      console.log("  Request details:");
+      console.log(`    URL: ${request.url}`);
+      console.log(`    Method: ${request.method}`);
+      console.log("    Headers:", JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
+    }
     
     try {
       // Try to log the request body if possible
       const clonedRequest = request.clone();
       const body = await clonedRequest.text();
-      console.log("    Body:", body);
-    } catch (error) {
-      console.log("    Body: Could not read request body");
+      if (EXTENDED_LOGGING) {
+        console.log("    Body:", body);
+      }
+    } catch (_error) {
+      if (EXTENDED_LOGGING) {
+        console.log("    Body: Could not read request body");
+      }
     }
 
     return new Response(JSON.stringify({ error: tokenValidation.reason }), {
@@ -428,8 +440,10 @@ async function handleWebhook(request: Request): Promise<Response> {
     // Parse and log the webhook payload
     const payload = await request.json();
     console.log("✅ Webhook authenticated successfully");
-    console.log("Received webhook payload:");
-    console.log(JSON.stringify(payload, null, 2));
+    if (EXTENDED_LOGGING) {
+      console.log("Received webhook payload:");
+      console.log(JSON.stringify(payload, null, 2));
+    }
 
     return new Response(JSON.stringify({
       status: "ok",
